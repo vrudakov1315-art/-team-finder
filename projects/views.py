@@ -5,10 +5,10 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from projects.constants import PAGINATE_BY
-from projects.forms import ProjectForm
-from projects.models import Project
-from projects.service import paginate_queryset
+from .constants import PAGINATE_BY
+from .forms import ProjectForm
+from .models import Project
+from .service import paginate_queryset
 
 
 def project_list(request):
@@ -63,17 +63,27 @@ def project_complete(request, pk):
 
 
 @login_required
+def favorite_projects(request):
+    projects_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
+    page_obj = paginate_queryset(projects_qs, request.GET.get('page'), PAGINATE_BY)
+    return render(request, 'projects/project_list.html', {
+        'projects': page_obj,
+        'page_obj': page_obj,
+    })
+
+
+@login_required
 @require_POST
 def toggle_participate(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if user == project.owner:
-        return JsonResponse({'status': 'error'}, status=HTTPStatus.BAD_REQUEST)
-    if participating := project.participants.filter(pk=user.pk).exists():
+    if user in project.participants.all():
         project.participants.remove(user)
+        joined = False
     else:
         project.participants.add(user)
-    return JsonResponse({'status': 'ok', 'participant': not participating})
+        joined = True
+    return JsonResponse({'joined': joined}, status=HTTPStatus.OK)
 
 
 @login_required
@@ -81,18 +91,10 @@ def toggle_participate(request, pk):
 def toggle_favorite(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if added := user.favorites.filter(pk=pk).exists():
+    if project in user.favorites.all():
         user.favorites.remove(project)
+        favorited = False
     else:
         user.favorites.add(project)
-    return JsonResponse({'status': 'ok', 'added': not added})
-
-
-@login_required
-def favorite_projects(request):
-    favorites_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
-    page_obj = paginate_queryset(favorites_qs, request.GET.get('page'), PAGINATE_BY)
-    return render(request, 'projects/favorite_projects.html', {
-        'projects': page_obj,
-        'page_obj': page_obj,
-    })
+        favorited = True
+    return JsonResponse({'favorited': favorited}, status=HTTPStatus.OK)
