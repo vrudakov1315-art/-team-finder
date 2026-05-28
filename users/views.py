@@ -3,19 +3,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import CustomPasswordChangeForm, LoginForm, ProfileEditForm, RegistrationForm
+from .forms import PasswordChangeForm, LoginForm, ProfileEditForm, RegistrationForm
 from .models import User
 from .service import paginate_queryset
 
 
 def user_register(request):
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('users:login')
-    else:
-        form = RegistrationForm()
+    form = RegistrationForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('users:login')
     return render(request, 'users/register.html', {'form': form})
 
 
@@ -75,25 +72,17 @@ def user_detail(request, pk):
 
 @login_required
 def edit_profile(request):
-    if request.method == 'POST':
-        form = ProfileEditForm(
-            request.POST, request.FILES, instance=request.user
-        )
-        if form.is_valid():
-            form.save()
-            return redirect('users:detail', pk=request.user.pk)
-    else:
-        form = ProfileEditForm(instance=request.user)
+    form = ProfileEditForm(request.POST or None, request.FILES or None, instance=request.user)
+    if form.is_valid():
+        form.save()
+        return redirect('users:detail', pk=request.user.pk)
     return render(request, 'users/edit-profile.html', {'form': form})
 
 
 @login_required
 def change_password(request):
-    if request.method == 'POST':
-        form = CustomPasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('users:login')
-    else:
-        form = CustomPasswordChangeForm(request.user)
+    form = PasswordChangeForm(request.user, request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('users:login')
     return render(request, 'users/change-password.html', {'form': form})
