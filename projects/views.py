@@ -63,27 +63,19 @@ def project_complete(request, pk):
 
 
 @login_required
-def favorite_projects(request):
-    projects_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
-    page_obj = paginate_queryset(projects_qs, request.GET.get('page'), PAGINATE_BY)
-    return render(request, 'projects/project_list.html', {
-        'projects': page_obj,
-        'page_obj': page_obj,
-    })
-
-
-@login_required
 @require_POST
 def toggle_participate(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if user in project.participants.all():
+    if participating := project.participants.filter(pk=user.pk).exists():
         project.participants.remove(user)
-        joined = False
     else:
         project.participants.add(user)
-        joined = True
-    return JsonResponse({'joined': joined}, status=HTTPStatus.OK)
+        participating = True
+    return JsonResponse(
+        {'status': 'ok', 'participant': not participating if participating else True},
+        status=HTTPStatus.OK
+    )
 
 
 @login_required
@@ -91,10 +83,22 @@ def toggle_participate(request, pk):
 def toggle_favorite(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if project in user.favorites.all():
+    if added := user.favorites.filter(pk=pk).exists():
         user.favorites.remove(project)
-        favorited = False
     else:
         user.favorites.add(project)
-        favorited = True
-    return JsonResponse({'favorited': favorited}, status=HTTPStatus.OK)
+        added = True
+    return JsonResponse(
+        {'status': 'ok', 'added': not added if added else True},
+        status=HTTPStatus.OK
+    )
+
+
+@login_required
+def favorite_projects(request):
+    favorites_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
+    page_obj = paginate_queryset(favorites_qs, request.GET.get('page'), PAGINATE_BY)
+    return render(request, 'projects/favorite_projects.html', {
+        'projects': page_obj,
+        'page_obj': page_obj,
+    })
