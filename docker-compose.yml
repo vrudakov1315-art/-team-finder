@@ -1,0 +1,42 @@
+﻿services:
+  db:
+    image: postgres:16
+    env_file:
+      - .env
+    container_name: teamfinder_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U team_finder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: python:3.11-slim
+    container_name: teamfinder_web
+    working_dir: /app
+    command: >
+      bash -c "pip install -r requirements.txt -q &&
+               python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               python manage.py create_test_data &&
+               python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: always
+
+volumes:
+  postgres_data:
+  media_data:

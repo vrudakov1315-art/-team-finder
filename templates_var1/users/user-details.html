@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Профиль пользователя{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/project_list.css' %}">
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/skills.css' %}">
+{% endblock %}
+
+{% with page_id="profile" %}
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="profile-info">
+            {% if profile_user.avatar %}
+                <img src="{{ profile_user.avatar.url }}" alt="Аватар" class="profile-avatar">
+            {% else %}
+                <img src="{% static 'images/default-avatar.png' %}" alt="Аватар по умолчанию" class="profile-avatar">
+            {% endif %}
+            <div class="profile-details">
+                <h2 class="profile-name">{{ profile_user.name }} {{ profile_user.surname }}</h2>
+                <p class="profile-description">
+                    {{ profile_user.about|default:"Описание профиля пока не добавлено." }}
+                </p>
+                <div class="profile-contacts">
+                    {% if profile_user.email %}
+                    <span>{% include 'includes/svg/email.html' %} {{ profile_user.email }}</span>
+                    {% endif %}
+                    {% if profile_user.phone %}
+                    <span>{% include 'includes/svg/phone.html' %} {{ profile_user.phone }}</span>
+                    {% endif %}
+                    {% if profile_user.github_url %}
+                    <span>{% include 'includes/svg/github.html' %}
+                        <a href="{{ profile_user.github_url }}" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <a href="#"
+               class="black-button black-button-share share-button"
+               data-url="/users/{{ profile_user.pk }}">
+                {% include 'includes/svg/share.html' %}
+            </a>
+            {% if request.user.is_authenticated and request.user.pk == profile_user.pk %}
+            <a href="/users/edit-profile" class="black-button">
+                {% include 'includes/svg/pen.html' %}
+                Редактировать
+            </a>
+            <a href="/projects/create-project" class="black-button">
+                {% include 'includes/svg/plus.html' %}
+                Добавить проект
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <h3>Проекты ({{ profile_user.owned_projects.all|length }})</h3>
+
+    <div class="collapsed-project-grid">
+        {% for project in profile_user.owned_projects.all %}
+        <div class="collapsed-project-card">
+            <div class="collapsed-project-card-header">
+                <h4><a href="/projects/{{ project.id }}">{{ project.name }}</a></h4>
+                <span class="project-status-black">
+                    {% if project.status == "open" %}
+                        Открыт
+                    {% elif project.status == "closed" %}
+                        Закрыт
+                    {% else %}
+                        {{ project.status }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="collapsed-project-card-body">
+                <div class="collapsed-project-card-description">
+                    <p class="project-card-description">{{ project.description|truncatechars:150 }}</p>
+                </div>
+                <div class="collapsed-project-card-footer">
+                    <p class="project-date">{{ project.created_at|date:"d.m.Y" }}</p>
+                    {% with count=project.participants.count %}
+                    <div class="project-participants">
+                        {% include 'includes/svg/participants.html' %}
+                        {{ count }} участников
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>Пока нет проектов</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+{% endwith %}
