@@ -2,8 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 
-from projects.constants import PROJECT_NAME_MAX_LENGTH
-
+from .constants import PROJECT_NAME_MAX_LENGTH
 
 class Project(models.Model):
     STATUS_OPEN = 'open'
