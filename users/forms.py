@@ -1,5 +1,6 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
 
 from .models import User
 
@@ -13,10 +14,10 @@ class RegistrationForm(forms.ModelForm):
         fields = ['name', 'surname', 'email', 'password']
 
     def clean(self):
-        cd = super().clean()
-        if cd.get('password') != cd.get('password2'):
+        cleaned_data = super().clean()
+        if cleaned_data.get('password') != cleaned_data.get('password2'):
             raise forms.ValidationError('Пароли не совпадают')
-        return cd
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -41,5 +42,5 @@ class ProfileEditForm(forms.ModelForm):
         widgets = {'about': forms.Textarea(attrs={'rows': 4})}
 
 
-class CustomPasswordChangeForm(PasswordChangeForm):
+class PasswordChangeForm(DjangoPasswordChangeForm):
     pass
