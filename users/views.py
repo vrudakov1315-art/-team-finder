@@ -1,11 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
-from .forms import RegistrationForm, ProfileEditForm, CustomPasswordChangeForm
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import CustomPasswordChangeForm, LoginForm, ProfileEditForm, RegistrationForm
 from .models import User
-from .forms import RegistrationForm, LoginForm, ProfileEditForm, CustomPasswordChangeForm
+from .service import paginate_queryset
+
 
 def user_register(request):
     if request.method == 'POST':
@@ -25,10 +26,11 @@ def user_login(request):
         user = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
-            return redirect('projects:project_list') 
+            return redirect('projects:project_list')
         messages.error(request, 'Неверный email или пароль')
     form = LoginForm()
     return render(request, 'users/login.html', {'form': form})
+
 
 def user_logout(request):
     logout(request)
@@ -58,8 +60,7 @@ def user_list(request):
             users = User.objects.filter(
                 participated_projects__in=my_projects
             ).distinct().order_by('-date_joined')
-    paginator = Paginator(users, 12)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    page_obj = paginate_queryset(users, request.GET.get('page'))
     return render(request, 'users/participants.html', {
         'participants': page_obj,
         'page_obj': page_obj,
