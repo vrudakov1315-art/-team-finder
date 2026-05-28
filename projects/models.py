@@ -1,5 +1,8 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+from django.urls import reverse
+
+from projects.constants import PROJECT_NAME_MAX_LENGTH
 
 
 class Project(models.Model):
@@ -10,7 +13,7 @@ class Project(models.Model):
         (STATUS_CLOSED, 'Закрытый'),
     ]
 
-    name = models.CharField('Название', max_length=200)
+    name = models.CharField('Название', max_length=PROJECT_NAME_MAX_LENGTH)
     description = models.TextField('Описание', blank=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -20,7 +23,12 @@ class Project(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     github_url = models.URLField('GitHub', blank=True)
-    status = models.CharField('Статус', max_length=6, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    status = models.CharField(
+        'Статус',
+        max_length=max(len(choice) for choice in (STATUS_OPEN, STATUS_CLOSED)),
+        choices=STATUS_CHOICES,
+        default=STATUS_OPEN
+    )
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
@@ -35,3 +43,6 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse('projects:project_detail', kwargs={'pk': self.pk})
