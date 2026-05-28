@@ -1,18 +1,19 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from .models import Project
-from .forms import ProjectForm
+from http import HTTPStatus
 
-PAGINATE_BY = 12
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
+from projects.constants import PAGINATE_BY
+from projects.forms import ProjectForm
+from projects.models import Project
+from projects.service import paginate_queryset
 
 
 def project_list(request):
-    projects_qs = Project.objects.select_related('owner').all()
-    paginator = Paginator(projects_qs, PAGINATE_BY)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    projects_qs = Project.objects.select_related('owner').prefetch_related('participants').all()
+    page_obj = paginate_queryset(projects_qs, request.GET.get('page'), PAGINATE_BY)
     return render(request, 'projects/project_list.html', {
         'projects': page_obj,
         'page_obj': page_obj,
@@ -20,36 +21,35 @@ def project_list(request):
 
 
 def project_detail(request, pk):
-    project = get_object_or_404(Project.objects.select_related('owner'), pk=pk)
+    project = get_object_or_404(
+        Project.objects.select_related('owner').prefetch_related('participants'),
+        pk=pk
+    )
     return render(request, 'projects/project-details.html', {'project': project})
 
 
 @login_required
 def project_create(request):
-    if request.method == 'POST':
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            project = form.save(commit=False)
-            project.owner = request.user
-            project.save()
-            return redirect('projects:project_detail', pk=project.pk)
-    else:
-        form = ProjectForm()
+    form = ProjectForm(request.POST or None)
+    if form.is_valid():
+        project = form.save(commit=False)
+        project.owner = request.user
+        project.save()
+        return redirect('projects:project_detail', pk=project.pk)
     return render(request, 'projects/create-project.html', {'form': form, 'is_edit': False})
 
 
 @login_required
 def project_edit(request, pk):
     project = get_object_or_404(Project, pk=pk, owner=request.user)
-    if request.method == 'POST':
-        form = ProjectForm(request.POST, instance=project)
-        if form.is_valid():
-            form.save()
-            return redirect('projects:project_detail', pk=project.pk)
-    else:
-        form = ProjectForm(instance=project)
+    form = ProjectForm(request.POST or None, instance=project)
+    if form.is_valid():
+        form.save()
+        return redirect('projects:project_detail', pk=project.pk)
     return render(request, 'projects/create-project.html', {
-        'form': form, 'project': project, 'is_edit': True,
+        'form': form,
+        'project': project,
+        'is_edit': True,
     })
 
 
@@ -68,14 +68,12 @@ def toggle_participate(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
     if user == project.owner:
-        return JsonResponse({'status': 'error'}, status=400)
-    if project.participants.filter(pk=user.pk).exists():
+        return JsonResponse({'status': 'error'}, status=HTTPStatus.BAD_REQUEST)
+    if participating := project.participants.filter(pk=user.pk).exists():
         project.participants.remove(user)
-        participating = False
     else:
         project.participants.add(user)
-        participating = True
-    return JsonResponse({'status': 'ok', 'participant': participating})
+    return JsonResponse({'status': 'ok', 'participant': not participating})
 
 
 @login_required
@@ -83,20 +81,17 @@ def toggle_participate(request, pk):
 def toggle_favorite(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if user.favorites.filter(pk=pk).exists():
+    if added := user.favorites.filter(pk=pk).exists():
         user.favorites.remove(project)
-        added = False
     else:
         user.favorites.add(project)
-        added = True
-    return JsonResponse({'status': 'ok', 'added': added})
+    return JsonResponse({'status': 'ok', 'added': not added})
 
 
 @login_required
 def favorite_projects(request):
-    favorites_qs = request.user.favorites.select_related('owner').all()
-    paginator = Paginator(favorites_qs, PAGINATE_BY)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    favorites_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
+    page_obj = paginate_queryset(favorites_qs, request.GET.get('page'), PAGINATE_BY)
     return render(request, 'projects/favorite_projects.html', {
         'projects': page_obj,
         'page_obj': page_obj,
