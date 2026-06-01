@@ -36,27 +36,27 @@ def user_logout(request):
 
 def user_list(request):
     filter_type = request.GET.get('filter', '')
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.all().order_by('id')
     if request.user.is_authenticated and filter_type:
         if filter_type == 'favorite_authors':
             fav_projects = request.user.favorites.all()
             users = User.objects.filter(
                 owned_projects__in=fav_projects
-            ).distinct().order_by('-date_joined')
+            ).distinct().order_by('id')
         elif filter_type == 'participated_authors':
             users = User.objects.filter(
                 owned_projects__participants=request.user
-            ).distinct().order_by('-date_joined')
+            ).distinct().order_by('id')
         elif filter_type == 'liked_my_projects':
             my_projects = request.user.owned_projects.all()
             users = User.objects.filter(
                 favorites__in=my_projects
-            ).distinct().order_by('-date_joined')
+            ).distinct().order_by('id')
         elif filter_type == 'my_participants':
             my_projects = request.user.owned_projects.all()
             users = User.objects.filter(
                 participated_projects__in=my_projects
-            ).distinct().order_by('-date_joined')
+            ).distinct().order_by('id')
     page_obj = paginate_queryset(users, request.GET.get('page'))
     return render(request, 'users/participants.html', {
         'participants': page_obj,
