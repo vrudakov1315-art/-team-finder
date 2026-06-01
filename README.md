@@ -4,10 +4,10 @@
 
 ## Стек
 
-- Python 3.12+
-- Django 5.2
-- PostgreSQL 16
-- Docker / Docker Compose
+*   Python 3.12+
+*   Django 5.2
+*   PostgreSQL 16
+*   Docker / Docker Compose
 
 ## Запуск через Docker
 
@@ -23,27 +23,49 @@ cp .env_example .env
 docker compose up -d --build
 ```
 
-3. Выполните миграции и соберите статические файлы:
+3. Приложение доступно по адресу: [http://localhost:8000](http://localhost:8000)
 
-```bash
-docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py collectstatic --no-input
-```
-
-4. Приложение доступно по адресу: http://localhost
+Docker Compose автоматически выполняет:
+*   Миграции БД
+*   Сбор статических файлов
+*   Создание тестовых данных (пользователи и проекты)
 
 ## Запуск без Docker (локальная разработка)
 
 ```bash
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py create_test_data
 python manage.py runserver
 ```
+
+## Тестовые данные
+
+При запуске через Docker Compose создаются тестовые пользователи:
+
+| Email                | Пароль      | Имя              |
+|----------------------|-------------|------------------|
+| alice@example.com    | testpass123 | Алиса Иванова    |
+| bob@example.com      | testpass123 | Боб Петров       |
+| carol@example.com    | testpass123 | Каролина Сидорова |
+
+Каждый пользователь имеет один проект для демонстрации функционала.
+
+## Основные страницы
+
+*   `/` — Главная страница (список всех проектов)
+*   `/users/login/` — Вход
+*   `/users/register/` — Регистрация
+*   `/users/list/` — Список пользователей
+*   `/users/<id>/` — Профиль пользователя
+*   `/projects/create-project/` — Создать проект
+*   `/projects/<int:pk>/` — Детальная страница проекта
+*   `/projects/favorites/` — Избранные проекты
 
 ## Структура проекта
 
 ```
-team_finder/      # главный Django-проект
+team_finder/          # главный Django-проект
 ├── projects/         # приложение: проекты (models, views, forms, urls)
 ├── users/            # приложение: пользователи (models, views, forms, urls)
 ├── templates_var1/   # HTML-шаблоны (вариант 1 — Избранное)
@@ -55,9 +77,10 @@ team_finder/      # главный Django-проект
 
 ## Особенности реализации
 
-- Используется вариант **1** (шаблоны `templates_var1/`): избранные проекты (сердечко), фильтрация пользователей по 4 критериям.
-- `toggle_favorite` — эндпоинт `POST /projects/toggle-favorite/` (без pk в URL, pk передаётся в теле запроса как `project_id`).
-- Аватарка пользователя генерируется автоматически при регистрации (первая буква имени на цветном фоне).
+*   Используется **вариант 1** (шаблоны `templates_var1/`): избранные проекты (сердечко), фильтрация пользователей по 4 критериям.
+*   **Автоматическая генерация аватарок**: при регистрации пользователя создаётся аватарка с первой буквой имени на цветном фоне.
+*   **Сортировка проектов**: по дате создания (от новых к старым).
+*   **Пагинация**: 12 карточек на странице.
 
 ## Переменные окружения (.env)
 
@@ -71,3 +94,7 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 ```
+
+## Лицензия
+
+MIT License
