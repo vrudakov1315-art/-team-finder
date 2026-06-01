@@ -21,11 +21,11 @@ from .validators import validate_github, validate_phone
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    name = models.CharField('Имя', max_length=USER_NAME_MAX_LENGTH, blank=True)
-    surname = models.CharField('Фамилия', max_length=USER_NAME_MAX_LENGTH, blank=True)
+    name = models.CharField('Имя', max_length=USER_NAME_MAX_LENGTH)
+    surname = models.CharField('Фамилия', max_length=USER_NAME_MAX_LENGTH)
     avatar = models.ImageField('Аватар', upload_to='avatars/', blank=True)
     phone = models.CharField(
-        'Телефон', max_length=USER_PHONE_MAX_LENGTH, blank=True, null=True, unique=True,
+        'Телефон', max_length=USER_PHONE_MAX_LENGTH, unique=True,
         validators=[validate_phone]
     )
     github_url = models.URLField('GitHub', blank=True, validators=[validate_github])
@@ -39,6 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name='interested_users',
         verbose_name='Избранное'
     )
+
     objects = UserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
