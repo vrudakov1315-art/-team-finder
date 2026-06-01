@@ -12,7 +12,12 @@ from .service import paginate_queryset
 
 
 def project_list(request):
-    projects_qs = Project.objects.select_related('owner').prefetch_related('participants').all()
+    projects_qs = (
+        Project.objects
+        .select_related('owner')
+        .prefetch_related('participants')
+        .order_by('-created_at')
+    )
     page_obj = paginate_queryset(projects_qs, request.GET.get('page'), PAGINATE_BY)
     return render(request, 'projects/project_list.html', {
         'projects': page_obj,
@@ -106,7 +111,12 @@ def toggle_favorite(request):
 
 @login_required
 def favorite_projects(request):
-    favorites_qs = request.user.favorites.select_related('owner').prefetch_related('participants').all()
+    favorites_qs = (
+        request.user.favorites
+        .select_related('owner')
+        .prefetch_related('participants')
+        .order_by('-created_at')
+    )
     page_obj = paginate_queryset(favorites_qs, request.GET.get('page'), PAGINATE_BY)
     return render(request, 'projects/favorite_projects.html', {
         'projects': page_obj,
