@@ -57,9 +57,14 @@ def project_edit(request, pk):
 @require_POST
 def project_complete(request, pk):
     project = get_object_or_404(Project, pk=pk, owner=request.user)
+    if project.status != Project.STATUS_OPEN:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Project is already closed'},
+            status=HTTPStatus.BAD_REQUEST
+        )
     project.status = Project.STATUS_CLOSED
     project.save()
-    return JsonResponse({'status': 'ok'})
+    return JsonResponse({'status': 'ok', 'project_status': 'closed'})
 
 
 @login_required
@@ -67,29 +72,34 @@ def project_complete(request, pk):
 def toggle_participate(request, pk):
     project = get_object_or_404(Project, pk=pk)
     user = request.user
-    if participating := project.participants.filter(pk=user.pk).exists():
+    is_participant = project.participants.filter(pk=user.pk).exists()
+    if is_participant:
         project.participants.remove(user)
+        participant = False
     else:
         project.participants.add(user)
-        participating = True
+        participant = True
     return JsonResponse(
-        {'status': 'ok', 'participant': not participating if participating else True},
+        {'status': 'ok', 'participant': participant},
         status=HTTPStatus.OK
     )
 
 
 @login_required
 @require_POST
-def toggle_favorite(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+def toggle_favorite(request):
+    project_id = request.POST.get('project_id')
+    project = get_object_or_404(Project, pk=project_id)
     user = request.user
-    if added := user.favorites.filter(pk=pk).exists():
+    is_favorited = user.favorites.filter(pk=project.pk).exists()
+    if is_favorited:
         user.favorites.remove(project)
+        favorited = False
     else:
         user.favorites.add(project)
-        added = True
+        favorited = True
     return JsonResponse(
-        {'status': 'ok', 'added': not added if added else True},
+        {'status': 'ok', 'favorited': favorited},
         status=HTTPStatus.OK
     )
 
